@@ -3,388 +3,288 @@ import pickle
 import csv
 
 def main():
-    print("WELCOME TO THIS MULTIFUNCTIONALITY PROGRAM WHICH SERVES ")
-    print("FILE HANDLING OF BINARY, CSV, TXT")
-    print("THIS PROGRAM ALSO PROVIDES FUNCTIONALITY TO YOU TO BE ABLE TO GIVE NORMAL COMMANDS AND INTERPRET THEM AND PERFORM FUNCTIONS IN DATABASE")
-    print("ENTER WHAT YOU WANT TO DO")
-    
+    print("WELCOME TO THIS MULTIFUNCTIONALITY PROGRAM")
+    print("Features:")
+    print("1. File Handling: Binary, CSV, and Text files")
+    print("2. Database Operations: MySQL command execution and table operations")
+    print("Enter your choice to proceed.")
+
     while True:
-        choice = input("Enter your choice (binary/csv/txt/mysql/exit): ").lower()
-        if "binary" in choice:
-            binaryfilehandling()
-        elif "csv" in choice:
-            csvfilehandling()
-        elif "txt" in choice:
-            txtfilehandling()
-        elif "mysql" in choice:
-            mysqlconnection()
-        elif "exit" in choice:
-            print("EXITING PROGRAM.")
+        user_choice = input("Choose an option (binary/csv/txt/mysql/exit): ").strip().lower()
+        if user_choice == "binary":
+            handle_binary_file()
+        elif user_choice == "csv":
+            handle_csv_file()
+        elif user_choice == "txt":
+            handle_text_file()
+        elif user_choice == "mysql":
+            handle_mysql_operations()
+        elif user_choice == "exit":
+            print("Exiting the program. Goodbye!")
             break
         else:
             print("Invalid choice. Please try again.")
 
-def askfilename():
-    file = input("Enter file name: ")
-    return file
+def get_filename():
+    return input("Enter the file name: ").strip()
 
-def askdata():
-    data = input("Enter the data you want to write: ")
-    return data
+def get_data():
+    return input("Enter the data to write: ").strip()
 
-def binaryfilehandling():
-    file = askfilename()
-    datan = []
-    choice = input("What to do? (read/write/search/update/Append more data): ").lower()
-    
-    if "read" in choice:
-        try:
-            with open(file, "rb") as f:
-                print("GIVING FILE'S DATA")
-                print('-'*20)
+def handle_binary_file():
+    filename = get_filename()
+    found = False
+    action = input("Choose an action (read/write/search/update/append): ").strip().lower()
+
+    try:
+        if action == "read":
+            with open(filename, "rb") as file:
+                print("File contents:")
+                print('-' * 20)
                 while True:
                     try:
-                        data = pickle.load(f)
-                        print(data)
+                        record = pickle.load(file)
+                        print(record)
                     except EOFError:
-                        print('-'*20)
-                        print("Successfully printed data.")
+                        print('-' * 20)
+                        print("End of file.")
                         break
-        except FileNotFoundError:
-            print("File not found.")
-        except Exception as e:
-            print(f"An error occurred: {e}")
 
-    elif "write" in choice:
-        with open(file, "ab") as f:
-            while True:
-                data = askdata()
-                pickle.dump(data, f)
-                ask = input("More data (Y/N)? ").lower()
-                if "n" in ask:
-                    break
-    elif "Append more data".lower() in choice:
-        with open(file,"ab")as f:
-            while True:
-                data = askdata()
-                pickle.dump(data,f)
-                ask = input("More data (Y/N)? ").lower()
-                if "n" in ask:
-                    break
+        elif action in {"write", "append"}:
+            with open(filename, "ab") as file:
+                while True:
+                    record={}
+                    n=int(input("Enter the number of keys: "))
+                    for i in range(n):
+                        key=input("Enter the key: ")
+                        value=input("Enter the value: ")
+                        record[key]=value
+                    pickle.dump(record, file)
+                    more_data = input("Add more records? (y/n): ").strip().lower()
+                    if more_data == "n":
+                        break
+                
 
-    elif "search" in choice or "update" in choice:
-        try:
-            with open(file, "rb") as f:
-                word = input("Enter the word to search: ")
+        elif action=="search":
+            search_term = input("Enter the term to search: ")
+            
+            with open(filename, "rb") as file:
                 while True:
                     try:
-                        dat = pickle.load(f)
-                        datan.append(dat)
+                        record = pickle.load(file)
+                        if search_term in record:
+                            found = True
+                            print(f"Found: {record}")
                     except EOFError:
                         break
-                for i in datan:
-                    if word in i:
-                        print(f"Found {word} in {file}")
-                        new_word = input("Enter new data to update: ")
-                        index = datan.index(i)
-                        datan[index] = new_word
-            with open(file, "wb") as f:
-                for i in datan:
-                    pickle.dump(i, f)
-                print(f"Updated {word} to {new_word}")
-        except FileNotFoundError:
-            print("File not found.")
-        except Exception as e:
-            print(f"An error occurred: {e}")
+                
+            if not found:
+                print(f"'{search_term}' not found in the file.")
+        elif action=="update":
+            search_term = input("Enter the key to search: ").strip()
+            value = input("Enter the present value of the key: ").strip()
+            
+            if value.isdigit():
+                value = int(value)
 
-def csvfilehandling():
-    file = askfilename()
-    choice = input("What to do? (read/write/search/update/Append more data): ").lower()
+            found = False 
+            with open(filename, "rb+") as file:
+                while True:
+                    pos = file.tell() 
+                    try:
+                        record = pickle.load(file) 
+                        if search_term in record and record[search_term] == value:
+                            print(f"Found: {record}")
+                            updated_value = input(f"Enter the updated value for {search_term}: ").strip()
+                            
+                            if updated_value.isdigit():
+                                updated_value = int(updated_value)
 
-    if "read" in choice:
-        try:
-            with open(file, "r") as f:
-                reader = csv.reader(f)
-                print("GIVING FILE'S DATA")
-                print('-'*20)
+                            # Update the record
+                            record[search_term] = updated_value
+                            file.seek(pos)  # Reposition the pointer to the start of the current record
+                            pickle.dump(record, file)  # Overwrite the record in the file
+                            print(f"Updated '{search_term}' successfully.")
+                            found = True
+                            break
+                    except EOFError:
+                        break  # Exit the loop when the end of the file is reached
+
+            if not found:
+                print(f"Key '{search_term}' with value '{value}' not found.")
+        else:
+            print("Invalid action for binary file handling.")
+
+    except FileNotFoundError:
+        print("File not found. Please ensure the file exists.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+def handle_csv_file():
+    filename = get_filename()
+    action = input("Choose an action (read/write/search/update/append): ").strip().lower()
+
+    try:
+        if action == "read":
+            with open(filename, "r") as file:
+                reader = csv.reader(file)
+                print("File contents:")
+                print('-' * 20)
                 for row in reader:
                     print(row)
-                print('-'*20)
-                print("Successfully printed data.")
-        except FileNotFoundError:
-            print("File not found.")
-        except Exception as e:
-            print(f"An error occurred: {e}")
+                print('-' * 20)
 
-    elif "write" in choice:
-        with open(file, "w", newline='') as f:
-            writer = csv.writer(f)
-            header = input("Enter header (comma-separated): ").split(',')
-            writer.writerow(header)
-            while True:
-                data = askdata().split(',')
-                writer.writerow(data)
-                ask = input("More data (Y/N)? ").lower()
-                if "n" in ask:
-                    break
+        elif action == "write":
+            with open(filename, "w", newline='') as file:
+                writer = csv.writer(file)
+                headers = input("Enter headers (comma-separated): ").split(',')
+                writer.writerow(headers)
+                while True:
+                    row_data = input("Enter row data (comma-separated): ").split(',')
+                    writer.writerow(row_data)
+                    more_data = input("Add more rows? (y/n): ").strip().lower()
+                    if more_data == "n":
+                        break
 
-    elif "search" in choice or "update" in choice:
-        datan = []
-        try:
-            with open(file, "r") as f:
-                word = input("Enter the word to search: ")
-                reader = csv.reader(f)
+        elif action in {"search", "update"}:
+            search_term = input("Enter the term to search: ")
+            rows = []
+            with open(filename, "r") as file:
+                reader = csv.reader(file)
                 for row in reader:
-                    datan.append(row)
-                for i in datan:
-                    if word in i:
-                        print(f"Found {word} in {file}")
-                        new_word = input("Enter new data to update: ")
-                        index = i.index(word)
-                        i[index] = new_word
-            with open(file, "w", newline='') as f:
-                writer = csv.writer(f)
-                writer.writerows(datan)
-            print("Updated successfully.")
-        except FileNotFoundError:
-            print("File not found.")
-        except Exception as e:
-            print(f"An error occurred: {e}")
-    elif "Append more data".lower() in choice:
-        with open(file,"a")as f:
-            writer = csv.writer(f)
-            while True:
-                data = askdata().split(',')
-                writer.writerow(data)
-                ask = input("More data (Y/N)? ").lower()
-                if "n" in ask:
-                    break
+                    rows.append(row)
 
-def txtfilehandling():
-    file = askfilename()
-    choice = input("What to do? (read/write/search/update/Append more data): ").lower()
+            found = False
+            for row in rows:
+                if search_term in row:
+                    found = True
+                    print(f"Found: {row}")
+                    if action == "update":
+                        updated_value = input("Enter the updated value: ")
+                        row[row.index(search_term)] = updated_value
 
-    if "read" in choice:
-        try:
-            with open(file, "r") as f:
-                
-                print("GIVING FILE'S DATA")
-                print('-'*20)
-                lines = f.readlines()
-                for line in lines:
-                    print(line, end="")
-                print('-'*20)
-                print("Successfully printed data.")
-        except FileNotFoundError:
-            print("File not found.")
-        except Exception as e:
-            print(f"An error occurred: {e}")
+            if found and action == "update":
+                with open(filename, "w", newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerows(rows)
+                print(f"Updated '{search_term}' successfully.")
+            elif not found:
+                print(f"'{search_term}' not found in the file.")
 
-    elif "write" in choice:
-        with open(file, "a") as f:
-            while True:
-                data = askdata()
-                f.write(data + '\n')
-                ask = input("More data (Y/N)? ").lower()
-                if "n".lower() in ask:
-                    break
+        elif action == "append":
+            with open(filename, "a", newline='') as file:
+                writer = csv.writer(file)
+                while True:
+                    row_data = input("Enter row data (comma-separated): ").split(',')
+                    writer.writerow(row_data)
+                    more_data = input("Add more rows? (y/n): ").strip().lower()
+                    if more_data == "n":
+                        break
 
-    elif "search" in choice or "update" in choice:
-        datan = []
-        try:
-            with open(file, "r") as f:
-                word = input("Enter the word to search: ")
-                lines = f.readlines()
-                for line in lines:
-                    datan.append(line.strip())
-                for i in datan:
-                    if word in i:
-                        print(f"Found {word} in {file}")
-                        new_word = input("Enter new data to update: ")
-                        index = datan.index(i)
-                        datan[index] = new_word
-            with open(file, "w") as f:
-                for line in datan:
-                    f.write(line + '\n')
-            print("Updated successfully.")
-        except FileNotFoundError:
-            print("File not found.")
-        except Exception as e:
-            print(f"An error occurred: {e}")
-    elif "Append more data".lower() in choice:
-        with open(file,"a")as f:
-            while True:
+        else:
+            print("Invalid action for CSV file handling.")
 
-                data = askdata()
-                f.write(data+'\n')
-                ask = input("More data (Y/N)? ").lower()
-                if "N".lower() in ask:
-                    break
+    except FileNotFoundError:
+        print("File not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
+def handle_text_file():
+    filename = get_filename()
+    action = input("Choose an action (read/write/search/update/append): ").strip().lower()
 
-def mysqlconnection():
     try:
-        # Get MySQL connection details from the user
-        host = input("Enter host to connect to: ")
-        userr = input("Enter user name: ")
-        your_password = input("Enter password: ")
-        your_database = input("Enter database name to connect to: ")
+        if action == "read":
+            with open(filename, "r") as file:
+                print("File contents:")
+                print('-' * 20)
+                print(file.read())
+                print('-' * 20)
 
-        # Establish the connection to MySQL database
+        elif action == "write":
+            with open(filename, "w") as file:
+                while True:
+                    line = get_data()
+                    file.write(line + "\n")
+                    more_data = input("Add more lines? (y/n): ").strip().lower()
+                    if more_data == "n":
+                        break
+
+        elif action in {"search", "update"}:
+            search_term = input("Enter the term to search: ")
+            lines = []
+            with open(filename, "r") as file:
+                lines = file.readlines()
+
+            found = False
+            for i, line in enumerate(lines):
+                if search_term in line:
+                    found = True
+                    print(f"Found: {line.strip()}")
+                    if action == "update":
+                        updated_line = input("Enter the updated line: ")
+                        lines[i] = updated_line + "\n"
+
+            if found and action == "update":
+                with open(filename, "w") as file:
+                    file.writelines(lines)
+                print(f"Updated '{search_term}' successfully.")
+            elif not found:
+                print(f"'{search_term}' not found in the file.")
+
+        elif action == "append":
+            with open(filename, "a") as file:
+                while True:
+                    line = get_data()
+                    file.write(line + "\n")
+                    more_data = input("Add more lines? (y/n): ").strip().lower()
+                    if more_data == "n":
+                        break
+
+        else:
+            print("Invalid action for text file handling.")
+
+    except FileNotFoundError:
+        print("File not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+def handle_mysql_operations():
+    try:
+        host = input("Enter the host: ").strip()
+        username = input("Enter the username: ").strip()
+        password = input("Enter the password: ").strip()
+        database = input("Enter the database name: ").strip()
+
         connection = mysql.connector.connect(
             host=host,
-            user=userr,
-            password=your_password,
-            database=your_database
+            user=username,
+            password=password,
+            database=database
         )
         cursor = connection.cursor()
-        print("Connected to MySQL database.")
+        print("Connected to the database.")
 
-        # Show all tables in the selected database
-        cursor.execute("SHOW TABLES")
-        tables = cursor.fetchall()
-        print("These are the tables present in", your_database)
-        print('-'*15)
-        for table in tables:
-            print(table[0])
-        print('-'*15)
-
-        # Get table name from user
-        table = input("Choose one table: ")
-
-        # Check if table exists
-        cursor.execute("SHOW TABLES LIKE %s", (table,))
-        if cursor.fetchone() is None:
-            print(f"Table {table} does not exist.")
-            return
-
-        # Show all records in the selected table
-        cursor.execute(f"SELECT * FROM {table}")
-        records = cursor.fetchall()
-        print("These records are present in the table:")
-        print('-'*15)
-        for record in records:
-            print(record)
-        print('-'*15)
-
-        # Show table structure
-        cursor.execute(f"DESC {table}")
-        structure = cursor.fetchall()
-        print("Following structure is followed in the table:")
-        print('-'*15)
-        for column in structure:
-            print(column)
-        print('-'*15)
-
-        # Menu for table operations
         while True:
-            print("What to do in the table now?")
-            choice = input("UPDATE / INSERT / DELETE / ADD COLUMN / REMOVE COLUMN / DROP TABLE / EXIT: ").lower()
-
-            if "update" in choice:
-                # Update operation
-                column = input("Which column to update? ")
-                condition = input("Extra condition? (y/n): ").lower()
-                internal_choice = input("What operation? (increase, decrease, multiply, divide, set default): ").lower()
-
-                if "increase" in internal_choice:
-                    increase = input("Increase by? ")
-                    query = f"UPDATE {table} SET {column} = {column} + %s"
-                    cursor.execute(query, (increase,))
-                    connection.commit()
-                    print("Column updated.")
-
-                elif "decrease" in internal_choice:
-                    decrease = input("Decrease by? ")
-                    query = f"UPDATE {table} SET {column} = {column} - %s"
-                    cursor.execute(query, (decrease,))
-                    connection.commit()
-                    print("Column updated.")
-
-                elif "multiply" in internal_choice:
-                    multiply = input("Multiply by? ")
-                    query = f"UPDATE {table} SET {column} = {column} * %s"
-                    cursor.execute(query, (multiply,))
-                    connection.commit()
-                    print("Column updated.")
-
-                elif "divide" in internal_choice:
-                    divide = input("Divide by? ")
-                    query = f"UPDATE {table} SET {column} = {column} / %s"
-                    cursor.execute(query, (divide,))
-                    connection.commit()
-                    print("Column updated.")
-
-                elif "set" in internal_choice:
-                    value = input("Set value to: ")
-                    query = f"UPDATE {table} SET {column} = %s"
-                    cursor.execute(query, (value,))
-                    connection.commit()
-                    print("Column updated.")
-
-                # Conditional update
-                if "y" in condition:
-                    cond = input("Provide condition after WHERE clause: ")
-                    query = f"UPDATE {table} SET {column} = %s WHERE {cond}"
-                    cursor.execute(query, (value,))
-                    connection.commit()
-                    print("Column updated with condition.")
-
-            elif "insert" in choice:
-                # Insert operation
-                d = {}
-                while True:
-                    col = input("Enter column name: ")
-                    val = input("Enter value: ")
-                    d[col] = val
-                    ask = input("More data (Y/N)? ").lower()
-                    if "n" in ask:
-                        break
-                columns = list(d.keys())
-                values = list(d.values())
-                placeholders = ', '.join(['%s'] * len(values))
-                query = f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({placeholders})"
-                cursor.execute(query, values)
-                connection.commit()
-                print("Inserted record successfully.")
-
-            elif "delete" in choice:
-                # Delete operation
-                cnd = input("Enter condition after WHERE clause: ")
-                query = f"DELETE FROM {table} WHERE {cnd}"
-                cursor.execute(query)
-                connection.commit()
-                print("Deleted record successfully.")
-
-            elif "alter" in choice:
-                # Alter table operation (add/drop column)
-                action = input("Modify / Add / Drop the column? ").lower()
-                if action == "add":
-                    column = input("Enter column name to add: ")
-                    datatype = input("Enter datatype (e.g., INT, VARCHAR): ")
-                    query = f"ALTER TABLE {table} ADD COLUMN {column} {datatype}"
-                    cursor.execute(query)
-                    connection.commit()
-                    print(f"Column {column} added.")
-                elif action == "drop":
-                    column = input("Enter column name to drop: ")
-                    query = f"ALTER TABLE {table} DROP COLUMN {column}"
-                    cursor.execute(query)
-                    connection.commit()
-                    print(f"Column {column} dropped.")
-
-            elif "drop" in choice:
-                # Drop table operation
-                query = f"DROP TABLE {table}"
-                cursor.execute(query)
-                connection.commit()
-                print(f"Table {table} dropped.")
-
-            elif "exit" in choice:
-                print("Exiting Program....")
-                cursor.close()
-                connection.close()
+            query = input("Enter an SQL query (or type 'exit' to quit): ").strip()
+            if query.lower() == "exit":
                 break
+
+            try:
+                cursor.execute(query)
+                if query.strip().lower().startswith("select"):
+                    results = cursor.fetchall()
+                    for row in results:
+                        print(row)
+                else:
+                    connection.commit()
+                    print("Query executed successfully.")
+
+            except mysql.connector.Error as err:
+                print(f"Error: {err}")
+
+        cursor.close()
+        connection.close()
+        print("Disconnected from the database.")
 
     except mysql.connector.Error as err:
         print(f"Error: {err}")
